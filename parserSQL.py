@@ -78,15 +78,21 @@ class parserSQL():
 
         #organisation des données par table
         for key, value in tables.items():
+            #tableau json/liste qui contiendra les données de la table
             result[key] = []
 
+            #récupération de toutes les clefs pour une table
             colonnes = headers[value].split(",")
 
+            #parcours de toutes les données d'une table
             for a in data[value]:
                 d = a.split(", ")
                 ind = 0
+
+                #création de l'object json/ dictionnaire, correspondant à une entrée de la table
                 result[key].append({})
 
+                #insertion des données de la table dans les clefs correspondantes
                 while ind < len(d):
                     result[key][-1][colonnes[ind]] = d[ind]
                     ind +=1
