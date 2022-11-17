@@ -28,10 +28,11 @@ class parserGenerique:
             parserCSV.parserCSV(self.filename).parser(self.cible)
             return self.cible
 
-#Lecture du fichier à parser via la ligne de commande
-try:
-    print('\nFichier à parser : ' + str(sys.argv[1]) + "\n")
-    a = parserGenerique(sys.argv[1])
-    print("\nLe fichier parsé se nomme : " + a.parser() + "\n")
-except:
-    print("\nUtilisation : python parserGenerique fichierAParser\n")
+if __name__ == '__main__':
+    #Lecture du fichier à parser via la ligne de commande
+    try:
+        print('\nFichier à parser : ' + str(sys.argv[1]) + "\n")
+        a = parserGenerique(sys.argv[1])
+        print("\nLe fichier parsé se nomme : " + a.parser() + "\n")
+    except:
+        print("\nUtilisation : python parserGenerique fichierAParser\n")
