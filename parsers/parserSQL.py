@@ -99,7 +99,3 @@ class parserSQL():
 
         f.write(json.dumps(result, indent=4,ensure_ascii=False,sort_keys = True))
         f.close()
-
-f = json.load(open("traceforum.json", "r"))
-
-print(f["activite"])

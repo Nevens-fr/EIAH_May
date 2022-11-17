@@ -1,4 +1,5 @@
-import parserSQL
+import parsers.parserSQL as parserSQL
+import parsers.parserCSV as parserCSV
 
 #Parser générique permettant de transformer en json n'importe quel fichier
 class parserGenerique:
@@ -22,6 +23,10 @@ class parserGenerique:
         elif self.extension == "sql":
             parserSQL.parserSQL(self.filename).parser(self.cible)
             return self.cible
+        elif self.extension == "csv":
+            parserCSV.parserCSV(self.filename).parser(self.cible)
+            return self.cible
 
-a = parserGenerique("traceforum.sql")
+#a = parserGenerique("traceforum.sql")
+a = parserGenerique("fichier.csv")
 print(a.parser())
