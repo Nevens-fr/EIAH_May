@@ -1,5 +1,6 @@
 import parsers.parserSQL as parserSQL
 import parsers.parserCSV as parserCSV
+import sys
 
 #Parser générique permettant de transformer en json n'importe quel fichier
 class parserGenerique:
@@ -27,6 +28,10 @@ class parserGenerique:
             parserCSV.parserCSV(self.filename).parser(self.cible)
             return self.cible
 
-#a = parserGenerique("traceforum.sql")
-a = parserGenerique("fichier.csv")
-print(a.parser())
+#Lecture du fichier à parser via la ligne de commande
+try:
+    print('\nFichier à parser : ' + str(sys.argv[1]) + "\n")
+    a = parserGenerique(sys.argv[1])
+    print("\nLe fichier parsé se nomme : " + a.parser() + "\n")
+except:
+    print("\nUtilisation : python parserGenerique fichierAParser\n")
