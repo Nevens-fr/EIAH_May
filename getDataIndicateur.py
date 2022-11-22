@@ -1,7 +1,8 @@
 from scipy import *
-
 from datetime import datetime
-import time
+import calendar
+import math
+import numpy as np 
 #Permet de renvoyer le nombre de connexion ainsi que le nombre de message posté
 def calculNbConnexionNbMsgPoste(dicoUser,data):
     for item in data :
@@ -28,7 +29,7 @@ def listeUstilisateur(data):
 def creationDicoUser(listeuser):
     dicoUser={}
     for item in listeuser :
-        dicoUser[item]={'compteurConnexion' : 0,'compteurMsgPoste' : 0,'fichierUpload':0, 'compteurMsgRep':0,'heureUtilisationSite': 0,'delaiReponse':0}
+        dicoUser[item]={'compteurConnexion' : 0,'compteurMsgPoste' : 0,'fichierUpload':0, 'compteurMsgRep':0,'heureUtilisationSite': 0,'delaiReponse':0,'nbMessageNonVu':0}
     return dicoUser
 
 #Permet de renvoyer le nombre de connexion ainsi que le nombre de message posté de référence
@@ -85,23 +86,27 @@ def heureUtilisationSite(user,data):
         for item in data :
             if user==item["Utilisateur"] and item["Date"]==tabidmsgenvoyer[i]:
                 if item["Titre"] == "'Connexion'" and debheure[i]=="":
-                    debheure[i]=item["Heure"]
+                    debheure[i]=item["Heure"].replace("'", '')
                 else:
-                    tabdate[i] = item["Heure"]
+                    tabdate[i] = item["Heure"].replace("'", '')
     tabheure = []
     for i in range(len(tabidmsgenvoyer)):
-        pt = datetime.strptime(debheure[i],'%H:%M:%S,%f')
-        total_seconds_debheure = pt.second + pt.minute*60 + pt.hour*3600
-        pt = datetime.strptime(tabdate[i],'%H:%M:%S,%f')
-        total_seconds_debheure = pt.second + pt.minute*60 + pt.hour*3600
-        tabheure.append(tabdate[i]-debheure[i])
-    return tabheure
+        if debheure[i]==''or tabdate[i]=='' :
+            tabheure.append(0)
+        else:
+            ptdebheure = datetime.strptime(debheure[i],'%H:%M:%S')
+            total_seconds_debheure = ptdebheure.second + ptdebheure.minute*60 + ptdebheure.hour*3600
+            pttabdate = datetime.strptime(tabdate[i],'%H:%M:%S')
+            total_seconds_tabdate = pttabdate.second + pttabdate.minute*60 + pttabdate.hour*3600
+            tabheure.append(total_seconds_tabdate-total_seconds_debheure)
+    return np.sum(tabheure)/len(tabheure)
     
 #Permet de calculer le Delai entre l'envoie du premier message et l'affichage de la réponse au message
 def calulDelaiReponseMessage(user,data):
     posternewmessagedate=[]
     posteridnewmessage=[]
     repondrenewmessage=[]
+    compteurmessagenonlu=0
     for item in data:
         if item["Titre"]=="'Poster un nouveau message'" and user==item["Utilisateur"]:
             posternewmessagedate.append(item["Date"].replace("'", ''))
@@ -110,7 +115,56 @@ def calulDelaiReponseMessage(user,data):
     for i in range(len(posteridnewmessage)) :
         for ligne in data:
             if (user==ligne["Utilisateur"]) and (ligne["Titre"]=="'Afficher le contenu d''un message'" or ligne["Titre"]=="'Répondre à un message'") :
-                if(ligne["Attribut"].split(',')[1].split('=')[1] == posteridnewmessage[i]):
+                if(ligne["Titre"]=="'Répondre à un message'" and ligne["Attribut"].split(',')[2].split('=')[1]== posteridnewmessage[i]):
                     repondrenewmessage[i]=(ligne["Date"].replace("'", ''))
-    print(repondrenewmessage)
-    return len(posternewmessagedate)
+                elif(ligne["Attribut"].split(',')[1].split('=')[1] == posteridnewmessage[i]):
+                    repondrenewmessage[i]=(ligne["Date"].replace("'", ''))
+
+    delaiReponse=[]
+
+    for i in range(len(posteridnewmessage)) : 
+        if(repondrenewmessage[i]=='' or posternewmessagedate[i]==''):
+            compteurmessagenonlu+=1
+        else:
+            ptpostmsg= datetime.strptime(posternewmessagedate[i],"%Y-%m-%d")
+            total_seconds_postmsg = calendar.timegm(ptpostmsg.timetuple())
+            ptnewmessage = datetime.strptime(repondrenewmessage[i],"%Y-%m-%d")
+            total_seconds_newmessage= calendar.timegm(ptnewmessage.timetuple())
+            delaiReponse.append(total_seconds_newmessage-total_seconds_postmsg)
+            
+    if math.isnan(((np.sum(delaiReponse)/(len(posteridnewmessage)-compteurmessagenonlu))/60)) == False:
+        return ((np.sum(delaiReponse)/(len(posteridnewmessage)-compteurmessagenonlu))/60)/60,compteurmessagenonlu
+    else:
+        return 0, compteurmessagenonlu
+
+
+
+##
+# Calculer les moyennes globales
+def calculerMoyennes(data):
+    mean = [0,0,0,0]
+    nb = 0
+
+    for personne,donnees in data.items():
+        for key,val in donnees.items():
+            if key == "compteurConnexion":
+                mean[0] = val + mean[0]
+            elif key == "compteurMsgPoste":
+                mean[1] += val
+            elif key == "heureUtilisationSite":
+                mean[2] += val
+            elif key == "delaiReponse":
+                mean[3] += val
+        nb +=1
+
+    i = 0
+
+    while i < len(mean):
+        if mean[i] != 0:
+            mean[i] = mean[i] / nb
+        i+=1
+    return mean
+
+#Retourne les données d'un dictionnaire sous la forme de liste
+def getDataList(data):
+    return [data["compteurConnexion"],data["compteurMsgPoste"],data["heureUtilisationSite"],data["delaiReponse"]]

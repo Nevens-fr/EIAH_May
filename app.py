@@ -11,6 +11,7 @@ import json
 
 app = Dash(__name__)
 
+#lecture et classification des données
 jsonopen=open("traceforum.json", "r")
 f = json.load(jsonopen)
 
@@ -19,25 +20,41 @@ listeUser= gDI.listeUstilisateur(f["transition"])
 dicoUser=gDI.creationDicoUser(listeUser)
 dicoUser=gDI.calculNbConnexionNbMsgPoste(dicoUser,f["transition"])
 dicoEleve,dicoEnseignant, dicoInactif = gDI.separationEleveEnseignant(dicoUser,listeUser,f["transition"])
+for cle,valeur in dicoEleve.items():
+    valeur["heureUtilisationSite"]=(gDI.heureUtilisationSite(cle,f["transition"])/60)
+    valeur["delaiReponse"],valeur["nbMessageNonVu"]=gDI.calulDelaiReponseMessage(cle,f["transition"])
 
 jsonopen.close()
 
-df = pd.DataFrame(dicoEleve)
-print(df.to_json())
+moyennes = gDI.calculerMoyennes(dicoEleve)
 
-fig = px.bar(df, x="gdp per capita", y="life expectancy",color="continent", barmode="group")
-
+#création des figures et ensembles de données
 eleves = []
 
 for cle,valeur in dicoEleve.items():
     eleves.append(cle.replace("'",""))
 
+colors = {
+    'background': '#111111',
+    'text': '#7FDBFF'
+}
+
+df = pd.DataFrame({
+    "Indicateurs":["Nombre de connexions", "Nombre de messages postés", "Temps total sur le site (minutes)", "Délai (heures)","Nombre de connexions", "Nombre de messages postés", "Temps total sur le site (minutes)", "Délai (heures)"],
+    "Valeurs" : moyennes+gDI.getDataList(dicoEleve["'"+eleves[0]+"'"]),
+    "Type": ["Moyenne","Moyenne","Moyenne","Moyenne","Etudiant","Etudiant","Etudiant","Etudiant"]
+})
+
+fig = px.bar(df, x="Indicateurs", y="Valeurs", color="Type", barmode="group")
+
+fig.update_layout(
+    plot_bgcolor=colors['background'],
+    paper_bgcolor=colors['background'],
+    font_color=colors['text']
+)
 
 #création de la mise en page
-app.layout = html.Div(children=[
-    html.H1(
-        children='Hello Dash'
-    ),
+app.layout = html.Div(style={'backgroundColor': colors['background']},children=[
 
     html.Div(children="Choissez un élève pour lequel vous souhaitez visualiser des indicateurs"),
 
@@ -49,44 +66,8 @@ app.layout = html.Div(children=[
 
     html.Br(),
 
-    html.Div([
-        html.Label(children="Nombre de connexions : "),
-        html.Label(id="nbCo")],
-        style={'display': 'flex', 'flex-direction': 'row'}
-    ),
-
-    html.Div([
-        html.Label(children="Nombre de messages postés : "),
-        html.Label(id="nbMessPost")],
-        style={'display': 'flex', 'flex-direction': 'row'}
-    ),
-
-    html.Div([
-        html.Label(children="Nombre de fichiers uploadés : "),
-        html.Label(id="nbfich")],
-        style={'display': 'flex', 'flex-direction': 'row'}
-    ),
-
-    html.Div([
-        html.Label(children="Nombre de réponses : "),
-        html.Label(id="nbRep")],
-        style={'display': 'flex', 'flex-direction': 'row'}
-    ),
-
-    html.Div([
-        html.Label(children="Temps total sur le site : "),
-        html.Label(id="tempsTotal")],
-        style={'display': 'flex', 'flex-direction': 'row'}
-    ),
-
-    html.Div([
-        html.Label(children="Délai de réponse moyen à un message : "),
-        html.Label(id="delai")],
-        style={'display': 'flex', 'flex-direction': 'row'}
-    ),
-
     dcc.Graph(
-        id='life-exp-vs-gdp',
+        id='graph',
         figure=fig
     )
 ])
@@ -94,17 +75,24 @@ app.layout = html.Div(children=[
 ##
 # Insertion des données d'un étudiant sélectionné par l'utilisateur
 @app.callback(
-    Output("nbCo", "children"),
-    Output("nbMessPost", "children"),
-    Output("nbfich", "children"),
-    Output("nbRep", "children"),
-    Output("tempsTotal", "children"),
-    Output("delai", "children"),
+    Output("graph", "figure"),
     Input("choix", "value"),
 )
 def affichage_donnees(option):
-    data = dicoEleve["'"+option+"'"]
-    return data['compteurConnexion'],data['compteurMsgPoste'],data['fichierUpload'],data['compteurMsgRep'],data['heureUtilisationSite'],data['delaiReponse']
+    df = pd.DataFrame({
+    "Indicateurs":["Nombre de connexions", "Nombre de messages postés", "Temps total sur le site (minutes)", "Délai (heures)","Nombre de connexions", "Nombre de messages postés", "Temps total sur le site (minutes)", "Délai (heures)"],
+    "Valeurs" : moyennes+gDI.getDataList(dicoEleve["'"+option+"'"]),
+    "Type": ["Moyenne","Moyenne","Moyenne","Moyenne","Etudiant","Etudiant","Etudiant","Etudiant"]
+    })
+
+    fig = px.bar(df, x="Indicateurs", y="Valeurs", color="Type", barmode="group")
+
+    fig.update_layout(
+    plot_bgcolor=colors['background'],
+    paper_bgcolor=colors['background'],
+    font_color=colors['text']
+    )
+    return fig
 
 
 if __name__ == '__main__':
